@@ -1,9 +1,7 @@
-
-
 var mainState = {
 
+
 	// Game Loop
-	
 	preload: function() { 
 	   
 	    // Load the bird sprite
@@ -12,13 +10,17 @@ var mainState = {
 	    // Load the pipe sprite
 	    game.load.image('pipe', 'images/pipe.png');
 
+	    // Load the sound for jump animation
+	    game.load.audio('jump', 'sounds/jump.mp3'); 
+
+
 	    // Change the background color of the game to blue
 	    game.stage.backgroundColor = '#71c5cf'; 
 	},
 
 
 	create: function() { 
-	   
+	   	
 	    // Set the physics system
 	    game.physics.startSystem(Phaser.Physics.ARCADE);
 
@@ -32,25 +34,38 @@ var mainState = {
 	    // Add gravity to the bird to make it fall
 	    this.bird.body.gravity.y = 1000;  
 
+ 		// Move the anchor to the left and downward
+		this.bird.anchor.setTo(-0.2, 0.5); 
+
+		// Bird animation in one line of code
+		// game.add.tween(this.bird).to({angle: -20}, 100).start(); 
 
 
 		// Create an empty group
 		this.pipes = game.add.group(); 
-
+ 
+ 	
 		// Add RowOfPipes every 1500ms
  		this.timer = game.time.events.loop(1500, this.addRowOfPipes, this); 
+ 		
 
-
+ 		// Add score
 		this.score = 0;
 		this.labelScore = game.add.text(20, 20, "0", 
     		{ font: "30px Arial", fill: "#ffffff" });  
 
 
+		// Sound
+		this.jumpSound = game.add.audio('jump');
+
+
 	    // Call the 'jump' function when the spacekey is hit
 	    var spaceKey = game.input.keyboard.addKey(
 	                    Phaser.Keyboard.SPACEBAR);
-	    spaceKey.onDown.add(this.jump, this); 
+	    spaceKey.onDown.add(this.jump, this);	    
 	},
+
+
 
 
 	update: function() {
@@ -60,24 +75,74 @@ var mainState = {
 	    if (this.bird.y < 0 || this.bird.y > 490)
 	        this.restartGame();
 
+    	if (this.bird.angle < 20) {
+    		this.bird.angle += 1;
+    	} 
+
+    	// check collision form bird and pipes
 	    game.physics.arcade.overlap(
-    	this.bird, this.pipes, this.restartGame, null, this);
-	},
+    	this.bird, this.pipes, this.hitPipe, null, this);
 
 
-
-	// Make the bird jump 
-	jump: function() {
-	    // Add a vertical velocity to the bird
-	    this.bird.body.velocity.y = -350;
 	},
 
 
 	// Restart the game
 	restartGame: function() {
+
 	    // Start the 'main' state, which restarts the game
 	    game.state.start('main');
 	},
+
+
+
+
+
+	// Make the bird jump 
+	jump: function() {
+	    
+	    // Add a vertical velocity to the bird
+	    this.bird.body.velocity.y = -350;
+
+	    // Create an animation on the bird
+		var animation = game.add.tween(this.bird);
+
+		// Change the angle of the bird to -20° in 100 milliseconds
+		animation.to({angle: -20}, 100);
+
+		// And start the animation
+		animation.start(); 
+
+		// play the jump sound
+		this.jumpSound.play(); 
+	},
+
+
+
+	hitPipe: function() {
+
+	    // If the bird has already hit a pipe, do nothing
+    	// It means the bird is already falling off the screen
+    	if (this.bird.alive == false)
+        return;
+
+    	// Set the alive property of the bird to false
+    	this.bird.alive = false;
+
+	    // Prevent new pipes from appearing
+	    game.time.events.remove(this.timer);
+
+	    // Go through all the pipes, and stop their movement
+	    this.pipes.forEach(function(p){
+	        p.body.velocity.x = 0;
+	    }, this);
+
+
+	    // Do not listen anymore to keyboad input
+    	game.input.keyboard.removeKey(
+    		Phaser.Keyboard.SPACEBAR);
+	}, 
+
 
 
 	addRowOfPipes: function() {
@@ -93,9 +158,12 @@ var mainState = {
 	            this.addOnePipe(400, i * 60 + 10);   
 	    	}
 	    }
+
 	    // Count score +1
 	    this.score += 1;
-		this.labelScore.text = this.score;     
+
+	    // redraw new sorce on screen
+		this.labelScore.text = this.score;    
 	},
 
 
@@ -116,14 +184,7 @@ var mainState = {
 	    pipe.checkWorldBounds = true;
 	    pipe.outOfBoundsKill = true;
 	},
-
-
-
-	
-
 };
-
-
 
 
 // Initialize Phaser, and create a 400px by 490px game
@@ -134,3 +195,5 @@ game.state.add('main', mainState);
 
 // Start the state to actually start the game
 game.state.start('main');
+
+
