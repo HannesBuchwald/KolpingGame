@@ -1,5 +1,5 @@
 // Author: Hannes Buchwald
-// Version: 1.0
+// Version: 1.0.mobile
 // Letze Aenderung: 17.02.2017
 
 
@@ -265,7 +265,7 @@ var mainState = {
 
 // Iniziieren Phaser mit einer Spielfeldgröße von 400, 490
 // Erstelle das Game in das Div mit der ID "GameDiv".
-var game = new Phaser.Game(400, 490, Phaser.AUTO,'GameDiv');
+var game = new Phaser.Game(400, 490);
 
 // Füge dem Spiel ein State und nenne Ihn "main"
 // Diesen "State" haben wir oben beschrieben
