@@ -1,93 +1,140 @@
+// Author: Hannes Buchwald
+// Version: 1.0
+// Letze Aenderung: 17.02.2017
+
+
 var mainState = {
 
 
-	// Game Loop
+	// Diese Funktion wird von Pahser aufgerufen
+	// Vor dem Spiel werden alle Rechenintensive Operationen
+	// wie laden von Bilder und Sound in den Speicher vorgenommen.
 	preload: function() { 
-	   
-	    // Load the bird sprite
-	    game.load.image('bird', 'images/bird.png');
 
-	    // Load the pipe sprite
-	    game.load.image('pipe', 'images/pipe.png');
+		// Grafiken werden in den Speicher geladen
+	    game.load.image('background', 'images/background.png');	   
+	    game.load.image('spaceShip', 'images/spaceShip.png');
+	    game.load.image('asterorid', 'images/asteorid.png');
 
-	    // Load the sound for jump animation
+		// Sounds werden in den Speicher geladen
 	    game.load.audio('jump', 'sounds/jump.mp3'); 
+	    game.load.audio('smashing', 'sounds/crash.mp3'); 
+	    game.load.audio('add', 'sounds/add.mp3'); 
 
-
-	    // Change the background color of the game to blue
-	    game.stage.backgroundColor = '#71c5cf'; 
+	    // Aenderung der Hintergundfarbe
+	    // game.stage.backgroundColor = '#71c5cf'; 
 	},
 
 
-	create: function() { 
-	   	
-	    // Set the physics system
+	// Diese Funktion wird von Pahser aufgerufen
+	// Hier wird die Spielelogik beschrieben
+	create: function() { 	
+	    
+
+	    // Game Physik
 	    game.physics.startSystem(Phaser.Physics.ARCADE);
 
-	    // Display the bird at the position x=100 and y=245
-	    this.bird = game.add.sprite(100, 245, 'bird');
 
-	    // Add physics to the bird
-	    // Needed for: movements, gravity, collisions, etc.
-	    game.physics.arcade.enable(this.bird);
+	    /*********  Grafik Objekte *********/
 
-	    // Add gravity to the bird to make it fall
-	    this.bird.body.gravity.y = 1000;  
+	    // Erstelle das Hintergundbild an Position x=0 y=0
+		game.add.sprite(0, 0, 'background');
 
- 		// Move the anchor to the left and downward
-		this.bird.anchor.setTo(-0.2, 0.5); 
+	    // Erstelle die Spielfigur an Position x=100 y=245
+	    this.spaceShip = game.add.sprite(100, 245, 'spaceShip');
 
-		// Bird animation in one line of code
-		// game.add.tween(this.bird).to({angle: -20}, 100).start(); 
+	    // Aktivie die Physik der Spielfigur 
+	    game.physics.arcade.enable(this.spaceShip);
 
+ 		// Verschiebe den Scherpunkt der Spielfigur nach links und nach untern
+		this.spaceShip.anchor.setTo(-0.2, 0.5); 
 
-		// Create an empty group
-		this.pipes = game.add.group(); 
+	
+
+		// Erstelle eine Asteorierdengruppe
+		// darin werden alle einzelne Asteorierden zusammengefügt
+		// Diese Gruppe wird für die Kollision mit der Spielfigur benötigt
+		this.asterorids = game.add.group(); 
  
- 	
-		// Add RowOfPipes every 1500ms
- 		this.timer = game.time.events.loop(1500, this.addRowOfPipes, this); 
- 		
+		// Erstelle eine Zeit Variable
+		// Über dieses Variable wird weiter unter definiert
+		// wie oft die "Asteoriedenwand" erstellt wird
+ 		this.timer;
 
- 		// Add score
-		this.score = 0;
+
+
+
+ 		/******** Text Objecte **********/
+
+ 		// Highscore
+		this.score = -1;
 		this.labelScore = game.add.text(20, 20, "0", 
     		{ font: "30px Arial", fill: "#ffffff" });  
 
 
-		// Sound
+		// Start Text
+		// Dieser wird nur am Anfang gezeigt um dem Spieler aufzufordern
+		// das Game zu beginnen.
+		this.startText = game.add.text(50, 200, "press space to start",
+    		{ font: "30px Arial", fill: "#ffffff" }); 
+
+
+
+		/************** Sounds **************/
+
+		// Dieser Sound wird beim Springen abgespielt
 		this.jumpSound = game.add.audio('jump');
 
+		// Dieser Sound wird beim einer Kollision abgespielt
+ 		this.smashingSound = game.add.audio('smashing');
 
-	    // Call the 'jump' function when the spacekey is hit
+ 		// Dieser Sound wird für das zählen des HighScores abgespielt
+		this.addSound = game.add.audio('add');
+
+
+
+		/************ Input ***********/
+
+	    // Immer wenn die Leertaste gedrückt wird,
+	    // wird die Funktion jump ausgeführt.
 	    var spaceKey = game.input.keyboard.addKey(
 	                    Phaser.Keyboard.SPACEBAR);
-	    spaceKey.onDown.add(this.jump, this);	    
+	    spaceKey.onDown.add(this.jump, this);
+
+
+	    this.start = true;
+
+	    // Dieser Input "hört" auf einen Mausklick oder
+	    // auf einen Touch click eines Touchpads.
+	    // Hier wird auch die jump Funktion bei einem Click ausgelöst.
+	    game.input.onDown.add(this.jump, this);
+
 	},
 
 
 
-
+	// Diese Funktion wird mit 60fps von Pahser aufgerufen
 	update: function() {
 	    
-	    // If the bird is out of the screen (too high or too low)
-	    // Call the 'restartGame' function
-	    if (this.bird.y < 0 || this.bird.y > 490)
+	    // Überprüfung ob das Spaceship noch im Spielfeld ist.
+	    // Wenn nicht kommt es zum Neustart
+	    if (this.spaceShip.y < 0 || this.spaceShip.y > 490)
 	        this.restartGame();
 
-    	if (this.bird.angle < 20) {
-    		this.bird.angle += 1;
+	    // Hier wird der Winkel des SpaceShips bis max 20 Grad nach unten geneigt 
+    	if (this.spaceShip.angle < 20) {
+    		this.spaceShip.angle += 1;
     	} 
 
-    	// check collision form bird and pipes
+    	// Kollistions Überprüfung
+    	// Bei einer Kollision wird die Funktion hitasteorid ausgeführt
 	    game.physics.arcade.overlap(
-    	this.bird, this.pipes, this.hitPipe, null, this);
-
+    	this.spaceShip, this.asterorids, this.hitAsterorid, null, this);
 
 	},
 
 
-	// Restart the game
+	// Neustart
 	restartGame: function() {
 
 	    // Start the 'main' state, which restarts the game
@@ -98,102 +145,132 @@ var mainState = {
 
 
 
-	// Make the bird jump 
+	// Springen des Spaceships
+	// und inizieren des Starts
 	jump: function() {
 	    
-	    // Add a vertical velocity to the bird
-	    this.bird.body.velocity.y = -350;
+	    // Beim ersten drücken der Leertaste oder der Maus "beginnt" das Spiel
+	    // Diese Schleife wird nur einmal ausgehführt
+		if(this.start){
+			this.start = false;
+			this.spaceShip.body.gravity.y = 1000;  
+			this.startText.text = "";
+			this.timer  = game.time.events.loop(1500, this.addRowOfAterorids, this); 
+			return;
+		} 
 
-	    // Create an animation on the bird
-		var animation = game.add.tween(this.bird);
 
-		// Change the angle of the bird to -20° in 100 milliseconds
+	    // Geschwindigkeit des SpaceShips in Y Richtung mit -350,
+	    // also nach oben
+	    this.spaceShip.body.velocity.y = -350;
+
+	    // Erstelle eine Animation des Spaceships 
+		var animation = game.add.tween(this.spaceShip);
+
+		// Aendere den Winkel des SpaceShip zu -20° in 100 milliseconds
 		animation.to({angle: -20}, 100);
 
-		// And start the animation
+		// Starte Animation
 		animation.start(); 
 
-		// play the jump sound
+		// Abspielen des "Jump" Sounds
 		this.jumpSound.play(); 
 	},
 
 
 
-	hitPipe: function() {
+	// Diese Funktion wird beim kolliedieren des Spaceships
+	// mit den Asteorieden aufgerufen. 
+	// Die Asteoriedenbewegung und die Eingabemöglichkeit werden gestoppt.
+	hitAsterorid: function() {
 
-	    // If the bird has already hit a pipe, do nothing
-    	// It means the bird is already falling off the screen
-    	if (this.bird.alive == false)
-        return;
+	    // Wenn das Spaceship mit dem Asteorieden schon kollidiert ist, 
+	    // wird die Funktion abgebrochen.
+    	if (this.spaceShip.alive == false) {
+    		return;
+    	}
 
-    	// Set the alive property of the bird to false
-    	this.bird.alive = false;
+    	// Kollisions Sound wird abgespielt 
+    	this.smashingSound.play(); 
 
-	    // Prevent new pipes from appearing
+    	// Set the alive property of the spaceShip to false
+    	this.spaceShip.alive = false;
+
+	    // Stopt das Erstellen neuer Asteorieden
 	    game.time.events.remove(this.timer);
 
-	    // Go through all the pipes, and stop their movement
-	    this.pipes.forEach(function(p){
+	    // Gehe durch die ganze Asteoriedengruppe und stoppe 
+	    // die Geschwindigkeit in X Richtung 
+	    this.asterorids.forEach(function(p){
 	        p.body.velocity.x = 0;
 	    }, this);
 
+	    // "Game Over" wird angezeigt bei x=35 y200
+	    game.add.text(35, 200, "GAME OVER",
+    		{ font: "50px Arial", fill: "#ffffff" }); 
 
-	    // Do not listen anymore to keyboad input
+	    // Hoere nicht mehr auf Keyboard und Mouse Input
     	game.input.keyboard.removeKey(
     		Phaser.Keyboard.SPACEBAR);
+		game.input.onDown.removeAll();
+
 	}, 
 
 
-
-	addRowOfPipes: function() {
+	// Asterodienwand wird erstellt
+	addRowOfAterorids: function() {
 	    
-	    // Randomly pick a number between 1 and 5
-	    // This will be the hole position
+	    // Ersetlle eine Zufallszahl von 1-5
+	    // Das ist die Zahl für die Positionen der Loecher in der Mauer
 	    var hole = Math.floor(Math.random() * 5) + 1;
 
-	    // Add the 6 pipes 
-	    // With one big hole at position 'hole' and 'hole + 1'
+	    // Erstelle die einzelnen Asteorierden der Asteoriedenwand
+	    // Ausser die für das "Loch"
 	    for (var i = 0; i < 8; i++) {
-	        if (i != hole && i != hole + 1)  {
-	            this.addOnePipe(400, i * 60 + 10);   
+	        if (i != hole && i != hole + 1 && i != hole + 2)  {
+	            this.addOneaterorid(400, i * 60 + 10);   
 	    	}
 	    }
 
-	    // Count score +1
+	    // Zähle Highscore um 1 nach oben
 	    this.score += 1;
+		this.addSound.play(); 
 
-	    // redraw new sorce on screen
+	    // Zeichen neuen Highscore im Spielfeld
 		this.labelScore.text = this.score;    
 	},
 
 
-	addOnePipe: function(x, y) {
-	    // Create a pipe at the position x and y
-	    var pipe = game.add.sprite(x, y, 'pipe');
+	// Erstelle ein einzelnen Asteorierden an Position x und y
+	addOneaterorid: function(x, y) {
+	    
+	    // Erstelle ein Asteoriedenobjekt an mitgegebener Position
+	    var asterorid = game.add.sprite(x, y, 'asterorid');
 
-	    // Add the pipe to our previously created group
-	    this.pipes.add(pipe);
+	    // Füge den Asteorieden der Asteoriedengruppe hinzu
+	    this.asterorids.add(asterorid);
 
-	    // Enable physics on the pipe 
-	    game.physics.arcade.enable(pipe);
+	    // Aktiviere Physik für den Asteorieden
+	    game.physics.arcade.enable(asterorid);
 
-	    // Add velocity to the pipe to make it move left
-	    pipe.body.velocity.x = -200; 
+	    // Bewege den Asteorieden nach Links in X Richting mit -200
+	    asterorid.body.velocity.x = -200; 
 
-	    // Automatically kill the pipe when it's no longer visible 
-	    pipe.checkWorldBounds = true;
-	    pipe.outOfBoundsKill = true;
+	    // Wenn der Asteoried nicht mehr im Spielfeld ist wird er gelöscht
+	    asterorid.checkWorldBounds = true;
+	    asterorid.outOfBoundsKill = true;
 	},
 };
 
 
-// Initialize Phaser, and create a 400px by 490px game
-var game = new Phaser.Game(400, 490);
+// Iniziieren Phaser mit einer Spielfeldgröße von 400, 490
+// Erstelle das Game in das Div mit der ID "GameDiv".
+var game = new Phaser.Game(400, 490, Phaser.AUTO,'GameDiv');
 
-// Add the 'mainState' and call it 'main'
+// Füge dem Spiel ein State und nenne Ihn "main"
+// Diesen "State" haben wir oben beschrieben
 game.state.add('main', mainState); 
 
-// Start the state to actually start the game
+// Starte den State
+// Also Starte das Spiel
 game.state.start('main');
-
-
